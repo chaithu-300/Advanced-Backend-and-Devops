@@ -1,0 +1,15 @@
+from fastapi import FastAPI, HTTPException
+import functions
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+@app.get("/")
+def hello():
+    return {"message": "Laundry-Hostel-Machines running successfully"}
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins = ["http://localhost:5174", "http://127.0.0.1:5174"],
+    allow_methods = ["*"],
+    allow_headers = ["*"],
+)
