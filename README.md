@@ -27,10 +27,10 @@ Fill in the method and path from your PRD's endpoint table. Status: ✅ done · 
 
 | # | Method + path | Built | Rules checked in /docs | Connected to React | Who |
 |---|---|---|---|---|---|
-| E1 |  | ⬜ | ⬜ | ⬜ |  |
-| E2 |  | ⬜ | ⬜ | ⬜ |   |
-| E3 |  | ⬜ | ⬜ | ⬜ |   |
-| E4 |  | ⬜ | ⬜ | ⬜ |   |
+| E1 | get/machines | ✅ | ⬜ | ⬜ |  |
+| E2 | get/machines/{machine_id} | 🟡 | ⬜ | ⬜ |   |
+| E3 | post/machines | ✅ | ⬜ | ⬜ |   |
+| E4 | patch/machines | ✅ | ⬜ | ⬜ |   |
 | E5 |  | ⬜ | ⬜ | ⬜ |   |
 | E6 |  | ⬜ | ⬜ | ⬜ |   |
 | E7 |  | ⬜ | ⬜ | ⬜ |   |
