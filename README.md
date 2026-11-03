@@ -20,3 +20,20 @@ Update your own row at every check-in.
 | Day 3 | B Chaitanya |  |  |  | |
 | Day 3 | Aditya |  |  |  | |
 | Day 3 | Pavan Kumar | |  | | |
+
+## 2. Endpoint tracker
+
+Fill in the method and path from your PRD's endpoint table. Status: ✅ done · 🟡 in progress · ⬜ not started
+
+| # | Method + path | Built | Rules checked in /docs | Connected to React | Who |
+|---|---|---|---|---|---|
+| E1 |  | ⬜ | ⬜ | ⬜ |  |
+| E2 |  | ⬜ | ⬜ | ⬜ |   |
+| E3 |  | ⬜ | ⬜ | ⬜ |   |
+| E4 |  | ⬜ | ⬜ | ⬜ |   |
+| E5 |  | ⬜ | ⬜ | ⬜ |   |
+| E6 |  | ⬜ | ⬜ | ⬜ |   |
+| E7 |  | ⬜ | ⬜ | ⬜ |   |
+| E8 |  | ⬜ | ⬜ | ⬜ |   |
+| E9 |  | ⬜ | ⬜ | ⬜ |   |
+| E10 |  | ⬜ | ⬜ | ⬜ |   |
