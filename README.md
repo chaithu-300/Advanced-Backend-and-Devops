@@ -4,7 +4,6 @@
 |---|---|---|---|---|---|
 |  | Aditya | B Chaitanya | Pavan Kumar|[Hostel-Laundry-machines](https://github.com/chaithu-300/hostel-laundry-machines/new/main?filename=README.md) | `team-hostel-laundry-machines` |
 
-**Every 3 hours:** update this file, then commit and push it with the message `Check-in Day 1 12:00` (your day and time). Your instructor reads this page on GitHub.
 
 ## 1. Who is doing what
 
