@@ -12,9 +12,9 @@ Update your own row at every check-in.
 | Day | Partner | What will you do? | Completed? | What are you going to work on next? | Stuck on? |
 |---|---|---|---|---|---|
 | Day 1 | Aditya |  | |  |  |
-| Day 1 | B Chaitanya |Create folder backend and add files and then define starting four methods   |In progress |checking rules in the doc | |
+| Day 1 | B Chaitanya |Create folder backend and add files and then define starting four methods   |In progress |checking rules in the doc |No |
 | Day 1 | Pavan Kumar |  |  |  |  |
-| Day 2 | B Chaitanya |  |  | |  |
+| Day 2 | B Chaitanya | Start working on frontend define main.jsx and index.html |  | |  |
 | Day 2 | Aditya | | |  |  |
 | Day 2 | Pavan Kumar |  |  |  ||
 | Day 3 | B Chaitanya |  |  |  | |
