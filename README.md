@@ -14,7 +14,7 @@ Update your own row at every check-in.
 | Day 1 | Aditya |  | |  |  |
 | Day 1 | B Chaitanya |Create folder backend and add files and then define starting four methods   |In progress |checking rules in the doc |No |
 | Day 1 | Pavan Kumar |  |  |  |  |
-| Day 2 | B Chaitanya | Start working on frontend define main.jsx and index.html |  | |  |
+| Day 2 | B Chaitanya | Start working on frontend define main.jsx, index.html and App.jsx | In progress | |  |
 | Day 2 | Aditya | | |  |  |
 | Day 2 | Pavan Kumar |  |  |  ||
 | Day 3 | B Chaitanya |  |  |  | |
