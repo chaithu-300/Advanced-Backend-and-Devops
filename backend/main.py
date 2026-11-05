@@ -30,6 +30,14 @@ def get_all_machines(block= False, kind = False):
 def update_machine(in_service, machine_id):
     return functions.update_machines(in_service, machine_id)
 
+@app.get("/machines/attention")
+def get_todays_usage_stats(block: str):
+    if block not in ["a", "b", "c", "d"]:
+        raise HTTPException(
+            status_code=422, 
+            detail="Block must be one of the following: a, b, c, d"
+        )
+    return functions.get_todays_usage(block)
 
 
 

@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, create_engine
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, create_engine, func
 from sqlalchemy.orm import Session, declarative_base
 from fastapi import FastAPI, HTTPException
 
@@ -96,4 +96,37 @@ def update_machines(in_service, machine_id):
     }
     session.close()
     return response
+
+
+def get_todays_usage(block):
+    session = Session(engine)
+    today_str = datetime.now().strftime("%Y-%m-%d") 
     
+    results = session.query(
+        machines.kind,
+        func.count(runs.run_id)
+    ).join(
+        runs, machines.id == runs.machine_id
+    ).filter(
+        machines.block == block,
+        runs.started_at.like(f"{today_str}%")
+    ).group_by(
+        machines.kind
+    ).all()
+    washer_count = 0
+    dryer_count = 0
+    for row in results:
+        kind, count = row
+        if kind.lower() == "washer":
+            washer_count = count
+        elif kind.lower() == "dryer":
+            dryer_count = count
+            
+    response = {
+        "block": block,
+        "washer_runs": washer_count,
+        "dryer_runs": dryer_count
+    }
+    
+    session.close()
+    return response
