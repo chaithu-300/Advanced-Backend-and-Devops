@@ -100,16 +100,11 @@ def update_machines(in_service, machine_id):
 
 def get_todays_usage(block):
     session = Session(engine)
-    today_str = datetime.now().strftime("%Y-%m-%d") 
+    today_time = datetime.now().strftime("%Y-%m-%d") 
     
     results = session.query(
         machines.kind,
-        func.count(runs.run_id)
-    ).join(
-        runs, machines.id == runs.machine_id
-    ).filter(
-        machines.block == block,
-        runs.started_at.like(f"{today_str}%")
+        func.count(runs.run_id)).join(runs, machines.id == runs.machine_id).filter(machines.block == block,runs.started_at.like(f"{today_time}%")
     ).group_by(
         machines.kind
     ).all()
