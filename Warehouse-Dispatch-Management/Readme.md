@@ -47,14 +47,14 @@ The application must provide APIs for the following. Fill in the API contract fo
 
 | # | Description | Method | Endpoint | Path / Query Params | Request Body | Response Body | Status Codes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | Register a package | | | | | | |
-| 2 | Get the details of a specific package | | | | | | |
-| 3 | Partially update package details | | | | | | |
-| 4 | Delete a package (only if it has not been dispatched) | | | | | | |
-| 5 | Search and filter packages (by destination, status, arrival date) | | | | | | |
-| 6 | View dispatch batches (filter by destination, vehicle, dispatch status) | | | | | | |
-| 7 | Get warehouse statistics (dispatch summary) | | | | | | |
-| 8 | Add data manually (e.g. create a dispatch batch and assign packages) | | | | | | |
+| 1 | Register a package | POST |/packages |None |package-name, Destination, weight, arrival-date |package details like package-id, weight, destination, status, arrival date, name |201, 400, 422 |
+| 2 | Get the details of a specific package | GET|/packages/{package_id} |path parameter{package_id} |None |package details with status |200, 404 |
+| 3 | Partially update package details |PATCH |/packages/{package_id} |path parameter{package_id} |destination, weight | package_id, weight, destination|200, 404, 400, 422 |
+| 4 | Delete a package (only if it has not been dispatched) | DELETE| /packages/{package_id}|path parameter{package_id} | None| any indication message|200, 404, 400 |
+| 5 | Search and filter packages (by destination, status, arrival date) |GET | /packages|Query parameters{destination, arrival_date-from and to, status } | enter destination and dates|get package details acc to filters we set | 200, 400|
+| 6 | View dispatch batches (filter by destination, vehicle, dispatch status) |GET |/dispatch-batches | Query parameters| destination, vehicle, dispatch status|show dispatch batches with batch_id | 200, 400|
+| 7 | Get warehouse statistics (dispatch summary) | GET|/warehouse/statistics | None|None |total_packages based on status and destination |200 |
+| 8 | Add data manually (e.g. create a dispatch batch and assign packages) |POST |/dispatch-batches |None |destination, vehicle |dispatch_batch details with batch_id |201, 404, 422 |
 
 > **Your task:** Complete the table before you start building. For each API, decide the HTTP method, endpoint path, path and query parameters, request body, response body, and status codes — including error cases (e.g. package not found, deleting a dispatched package).
 
