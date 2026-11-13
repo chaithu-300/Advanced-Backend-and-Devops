@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Header, Body #pyright: ignore
 import functions
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware #pyright: ignore
 from datetime import date
 
@@ -17,12 +18,18 @@ app.add_middleware(
 )
 
 @app.post("/add_packages")
-def Register_packages(package_name: str, destination: str, weight: float, arrival_date: date):
+def Register_packages(package_name: str, destination: str, weight: float, arrival_date: date, token = Header(None)):
+    username = functions.verify_token(token=token)
+    if not username:
+        raise HTTPException(status_code = 401, detail = "Invalid or Expired token")
     return functions.register_package(package_name,destination,weight,arrival_date)
 
 
 @app.get("/packages/{package_id}")
-def get_package_details(package_id: int):
+def get_package_details(package_id: int, token = Header(None)):
+    username = functions.verify_token(token=token)
+    if not username:
+        raise HTTPException(status_code = 401, detail = "Invalid or Expired token")
     response = functions.get_package(package_id)
 
     if response is None:
@@ -31,7 +38,10 @@ def get_package_details(package_id: int):
     return response
 
 @app.patch("/packages/{package_id}")
-def Update_package(package_id: int, package_name = None, destination = None, weight = None, arrival_date = None, status = None):
+def Update_package(package_id: int, package_name = None, destination = None, weight = None, arrival_date = None, status = None, token = Header(None)):
+    username = functions.verify_token(token=token)
+    if not username:
+        raise HTTPException(status_code = 401, detail = "Invalid or Expired token")
 
     response = functions.update_package(
         package_id,
@@ -66,7 +76,10 @@ def Delete_package(package_id: int, token = Header(None)):
 
 
 @app.get("/packages")
-def get_packages(destination = None, arrival_date = None, status = None):
+def get_packages(destination = None, arrival_date = None, status = None, token = Header(None)):
+    username = functions.verify_token(token=token)
+    if not username:
+        raise HTTPException(status_code = 401, detail = "Invalid or Expired token")
 
     packages = functions.search_by_filter(destination, arrival_date, status)
 
@@ -74,7 +87,10 @@ def get_packages(destination = None, arrival_date = None, status = None):
 
 
 @app.get("/dispatch-batches")
-def get_dispatch_batches(destination=None, vehicle=None, status=None):
+def get_dispatch_batches(destination=None, vehicle=None, status=None, token = Header(None)):
+    username = functions.verify_token(token=token)
+    if not username:
+        raise HTTPException(status_code = 401, detail = "Invalid or Expired token")
 
     batches = functions.search_dispatch_batches(destination,vehicle,status)
 
@@ -96,15 +112,14 @@ def create_dispatch_batch(
     package_ids: list[int] = Body(),
     token = Header(None)
 ):
+    username = functions.verify_token(token=token)
+    if not username:
+        raise HTTPException(status_code = 401, detail = "Invalid or Expired token")
     response = functions.create_dispatch_batch(
         destination,
         vehicle,
         package_ids
     )
-    username = functions.verify_token(token=token)
-    if not username:
-        raise HTTPException(status_code = 401, detail = "Invalid or Expired token")
-
     if response == "no packages provided":
         raise HTTPException(status_code=400, detail="At least one package is required")
 

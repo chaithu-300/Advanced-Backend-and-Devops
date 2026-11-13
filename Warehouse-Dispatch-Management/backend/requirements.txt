@@ -3,3 +3,4 @@ uvicorn
 sqlalchemy
 argon2-cffi
 PyJWT
+pydantic
