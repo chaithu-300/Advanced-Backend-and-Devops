@@ -1,12 +1,29 @@
 from datetime import datetime, timedelta
 from platform import machine
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, create_engine, func
-from sqlalchemy.orm import Session, declarative_base
-from fastapi import FastAPI, HTTPException
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, create_engine, func #pyright: ignore
+from sqlalchemy.orm import Session, declarative_base #pyright: ignore
+from fastapi import FastAPI, HTTPException #pyright: ignore
+import jwt #pyright: ignore
+from argon2 import PasswordHasher #pyright: ignore
+from argon2.exceptions import VerifyMismatchError #pyright: ignore
+
+ph = PasswordHasher()
 
 DB_PATH = "hostel-laundry.db"
 engine = create_engine(f"sqlite:///{DB_PATH}")
 Base = declarative_base()
+
+ACCESS_TOKEN_EXPIRY = 15 #mins
+REFRESH_TOKEN_EXPIRY = 7 * 24 * 60
+SECRET_KEY = "SECRET123"
+ALGORITHM = "HS256"
+
+class User(Base):
+    __tablename__ = "Users"
+
+    user_id = Column(Integer, primary_key = True)
+    user_name = Column(String)
+    password = Column(String)
 
 class machines(Base):
     __tablename__ = "machines"
@@ -29,7 +46,58 @@ class runs(Base):
 
 Base.metadata.create_all(engine)
 
-def add_machines(name, block, kind, cycles_minutes, in_service):
+def register_user(user_name, password):
+    session = Session(engine)
+    user_exists = session.query(User).filter_by(user_name=user_name).first()
+    if user_exists is not None:
+        session.close()
+        return False
+    session.add(User(user_name=user_name, password = ph.hash(password)))
+    session.commit()
+    session.close()
+    return True
+
+def verify_login(username, password):
+    session = Session(engine)
+    user = session.query(User).filter_by(user_name = username).first()
+    if user is None:
+        session.close()
+        return False
+    try:
+        ph.verify(user.password, password)
+    except VerifyMismatchError:
+        session.close()
+        return False
+    session.close()
+    access_token = create_token(username=username, token_type = "access")
+    refresh_token = create_token(username=username, token_type = "refresh")
+    return {"access_token": access_token, "refresh_token": refresh_token}
+
+def create_token(username, token_type):
+    time = ACCESS_TOKEN_EXPIRY
+    if token_type == "refresh":
+        time = REFRESH_TOKEN_EXPIRY
+
+    payload = {
+        "username": username,
+        "token_type": token_type,
+        "exp": datetime.now() + timedelta(minutes = time)
+    }
+    token = jwt.encode(payload=payload, key = SECRET_KEY, algorithm = ALGORITHM)
+    return token
+
+def verify_token(token):
+    try:
+        payload = jwt.decode(jwt=token, key=SECRET_KEY, algorithms=[ALGORITHM])
+
+    except:
+        return False
+
+    if payload["token_type"] == "access":
+        return payload["username"]
+    return False
+
+def add_machines(name, block, kind, in_service,cycles_minutes):
     session = Session(engine)
     new_machine = machines(
         name = name,
@@ -78,7 +146,7 @@ def get_machine_by_id(machine_id):
                 dt_ends = datetime.strptime(active_run.ends_at, "%Y-%m-%d %H:%M")
                 minutes_left = max(0, int((dt_ends - dt_now).total_seconds() / 60))
             else:
-                state = "waiting for pickup"
+                state = "completed"
     recent_history = session.query(runs).filter(
         runs.machine_id == machine.id
     ).order_by(runs.run_id).all()
@@ -200,12 +268,17 @@ def collect_by_roll_no(roll_no,machine_id):
     session.close()
     return response
     
-def clothes_not_collected(roll_no,machine_id):
+def clothes_not_collected(roll_no,machine_id=None):
     session=Session(engine)
     
     run = session.query(runs).filter(runs.roll_no == roll_no,runs.machine_id == machine_id).first()
+
+    if not run:
+        raise HTTPException(status_code = 404,detail="No matching run found")
     if run.status != "Completed":
         raise HTTPException(status_code=400,detail="Only completed runs can be cleared")
+
+    run.status = "Not collected"
     
     session.commit()
     response ={
@@ -222,7 +295,7 @@ def get_active_runs_by_rollnumber(roll_number):
     session = Session(engine)
 
     active_runs = session.query(runs).filter(
-        runs.roll_no == roll_number.strip(),
+        runs.roll_no == roll_number,
         runs.collected_at == None
     ).all()
 
