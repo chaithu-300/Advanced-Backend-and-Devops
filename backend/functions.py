@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from platform import machine
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, create_engine, func #pyright: ignore
 from sqlalchemy.orm import Session, declarative_base #pyright: ignore
@@ -17,6 +17,8 @@ ACCESS_TOKEN_EXPIRY = 15 #mins
 REFRESH_TOKEN_EXPIRY = 7 * 24 * 60
 SECRET_KEY = "SECRET123"
 ALGORITHM = "HS256"
+STAFF_CODE = "STAFF123"
+
 
 class User(Base):
     __tablename__ = "Users"
@@ -24,6 +26,7 @@ class User(Base):
     user_id = Column(Integer, primary_key = True)
     user_name = Column(String)
     password = Column(String)
+    role = Column(String, default = "student")
 
 class machines(Base):
     __tablename__ = "machines"
@@ -46,13 +49,13 @@ class runs(Base):
 
 Base.metadata.create_all(engine)
 
-def register_user(user_name, password):
+def register_user(user_name, password, role = "student"):
     session = Session(engine)
     user_exists = session.query(User).filter_by(user_name=user_name).first()
     if user_exists is not None:
         session.close()
         return False
-    session.add(User(user_name=user_name, password = ph.hash(password)))
+    session.add(User(user_name=user_name, password = ph.hash(password), role = role))
     session.commit()
     session.close()
     return True
@@ -68,34 +71,34 @@ def verify_login(username, password):
     except VerifyMismatchError:
         session.close()
         return False
+    role = user.role
     session.close()
-    access_token = create_token(username=username, token_type = "access")
-    refresh_token = create_token(username=username, token_type = "refresh")
+    access_token = create_token(username, role, "access")
+    refresh_token = create_token(username, role, "refresh")
     return {"access_token": access_token, "refresh_token": refresh_token}
 
-def create_token(username, token_type):
+def create_token(username, role, token_type):
     time = ACCESS_TOKEN_EXPIRY
     if token_type == "refresh":
         time = REFRESH_TOKEN_EXPIRY
 
     payload = {
         "username": username,
+        "role": role,
         "token_type": token_type,
-        "exp": datetime.now() + timedelta(minutes = time)
+        "exp": datetime.now(timezone.utc) + timedelta(minutes = time)
     }
-    token = jwt.encode(payload=payload, key = SECRET_KEY, algorithm = ALGORITHM)
-    return token
+    return jwt.encode(payload=payload, key = SECRET_KEY, algorithm = ALGORITHM)
 
-def verify_token(token):
+def verify_token(token, expected_type = "access"):
     try:
         payload = jwt.decode(jwt=token, key=SECRET_KEY, algorithms=[ALGORITHM])
-
-    except:
+    except jwt.PyJWTError:
         return False
 
-    if payload["token_type"] == "access":
-        return payload["username"]
-    return False
+    if payload.get("token_type") != expected_type:
+        return False
+    return {"username": payload["username"], "role": payload.get("role")}
 
 def add_machines(name, block, kind, in_service,cycles_minutes):
     session = Session(engine)

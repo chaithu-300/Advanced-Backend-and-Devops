@@ -1,11 +1,14 @@
-from typing import Literal
+from typing import Literal, Optional
 
-from fastapi import FastAPI, HTTPException, Header #pyright: ignore
+from fastapi import FastAPI, HTTPException, Header, Depends #pyright: ignore
 import functions
 from fastapi.middleware.cors import CORSMiddleware #pyright: ignore
 from pydantic import BaseModel, Field #pyright: ignore
 
 app = FastAPI()
+
+
+# ---------------- Request models ----------------
 
 class AddMachineRequest(BaseModel):
     name: str = Field(min_length=1)
@@ -19,18 +22,43 @@ class UpdateMachineRequest(BaseModel):
     machine_id: int
     in_service: int = Field(ge=0, le=1)
 
+
+# used for start, collect and clear
 class RunRequest(BaseModel):
     roll_no: str = Field(min_length=1)
     machine_id: int
+
 
 class LoginRequest(BaseModel):
     username: str = Field(min_length=1)
     password: str = Field(min_length=1)
 
+
 class RegisterRequest(BaseModel):
     user_name: str = Field(min_length=1)
     password: str = Field(min_length=1)
+    role: Literal["student", "staff"] = "student"
+    staff_code: Optional[str] = None      # only needed when role is "staff"
 
+
+# ---------------- Role checks ----------------
+
+def get_current_user(token = Header(None)):
+    """Any logged-in user (student or staff). Returns {"username", "role"}."""
+    user = functions.verify_token(token=token)
+    if not user:
+        raise HTTPException(status_code = 401, detail = "Invalid or Expired token")
+    return user
+
+
+def staff_only(user = Depends(get_current_user)):
+    """Only staff can pass."""
+    if user["role"] != "staff":
+        raise HTTPException(status_code = 403, detail = "Only laundry staff can do this")
+    return user
+
+
+# ---------------- Routes ----------------
 
 @app.get("/")
 def hello():
@@ -43,28 +71,42 @@ app.add_middleware(
     allow_headers = ["*"],
 )
 
+# ----- Staff only -----
+
 @app.post("/add_machine")
-def add_machine(data: AddMachineRequest, token = Header(None)):
-    username = functions.verify_token(token=token)
-    if not username:
-          raise HTTPException(status_code = 401, detail = "Invalid or Expired token")
+def add_machine(data: AddMachineRequest, user = Depends(staff_only)):
     return functions.add_machines(data.name, data.block, data.kind, data.in_service, data.cycles_minutes)
 
+@app.patch("/update_machine/")
+def update_machine(data: UpdateMachineRequest, user = Depends(staff_only)):
+    if functions.get_machine_by_id(data.machine_id) is None:
+        raise HTTPException(status_code = 404, detail = "Can't find machine with the given ID")
+    return functions.update_machines(data.in_service, data.machine_id)
+
+@app.get("/machines/attention")
+def get_attention_machines(user = Depends(staff_only)):
+    return functions.get_machines_needing_attention()
+
+@app.get("/machines/todays_usage_stats/{block}")
+def get_todays_usage_stats(block: str, user = Depends(staff_only)):
+    if block not in ["a", "b", "c", "d"]:
+        raise HTTPException(
+            status_code=422,
+            detail="Block must be one of the following: a, b, c, d"
+        )
+    return functions.get_todays_usage(block)
+
+# ----- Any logged-in user -----
+
 @app.get("/machines_by_id/{machine_id}")
-def get_single_machine_endpoint(machine_id: int, token = Header(None)):
-    username = functions.verify_token(token=token)
-    if not username:
-        raise HTTPException(status_code = 401, detail = "Invalid or Expired token")
+def get_single_machine_endpoint(machine_id: int, user = Depends(get_current_user)):
     machine = functions.get_machine_by_id(machine_id)
     if machine is None:
         raise HTTPException(status_code = 404, detail = "Machine not found")
     return machine
 
 @app.get("/machines")
-def get_all_machines_endpoint(block = None, kind = None, token = Header(None)):
-    username = functions.verify_token(token=token)
-    if not username:
-        raise HTTPException(status_code = 401, detail = "Invalid or Expired token")
+def get_all_machines_endpoint(block = None, kind = None, user = Depends(get_current_user)):
     if block and block not in ["a", "b", "c", "d"]:
         raise HTTPException(status_code=422, detail="Block must be one of: a, b, c, d")
     if kind and kind not in ["washer", "dryer"]:
@@ -72,50 +114,26 @@ def get_all_machines_endpoint(block = None, kind = None, token = Header(None)):
 
     return functions.get_all_machines(block, kind)
 
-
-@app.patch("/update_machine/")
-def update_machine(data: UpdateMachineRequest, token = Header(None)):
-    username = functions.verify_token(token=token)
-    if not username:
-        raise HTTPException(status_code = 401, detail = "Invalid or Expired token")
-    if functions.get_machine_by_id(data.machine_id) is None:
-        raise HTTPException(status_code = 404, detail = "Can't find machine with the given ID")
-    return functions.update_machines(data.in_service, data.machine_id)
-
-
 @app.post("/machine/roll_no")
-def start_with_roll_no(data: RunRequest, token = Header(None)):
-    username = functions.verify_token(token=token)
-    if not username:
-        raise HTTPException(status_code = 401, detail = "Invalid or Expired token")
+def start_with_roll_no(data: RunRequest, user = Depends(get_current_user)):
     if functions.get_machine_by_id(data.machine_id) is None:
         raise HTTPException(status_code = 404, detail = "Can't find machine with the given ID")
     return functions.start_with_roll_no(data.roll_no, data.machine_id)
 
 @app.post("/machine/collect_roll_no")
-def collect_by_roll_no(data: RunRequest, token = Header(None)):
-    username = functions.verify_token(token=token)
-    if not username:
-        raise HTTPException(status_code = 401, detail = "Invalid or Expired token")
+def collect_by_roll_no(data: RunRequest, user = Depends(get_current_user)):
     if functions.get_machine_by_id(data.machine_id) is None:
         raise HTTPException(status_code = 404, detail = "Can't find machine with the given ID")
     return functions.collect_by_roll_no(data.roll_no, data.machine_id)
 
 @app.patch("/machine/not_collected_roll_no")
-def not_collected(data: RunRequest, token = Header(None)):
-    username = functions.verify_token(token=token)
-    if not username:
-        raise HTTPException(status_code = 401, detail = "Invalid or Expired token")
+def not_collected(data: RunRequest, user = Depends(get_current_user)):
     if functions.get_machine_by_id(data.machine_id) is None:
         raise HTTPException(status_code = 404, detail = "Can't find machine with the given ID")
     return functions.clothes_not_collected(data.roll_no, data.machine_id)
 
 @app.get("/get_active_runs_by_rollnumber/{roll_number}")
-def get_active_runs_endpoint(roll_number, token = Header(None)):
-    username = functions.verify_token(token=token)
-    if not username:
-        raise HTTPException(status_code = 401, detail = "Invalid or Expired token")
-
+def get_active_runs_endpoint(roll_number, user = Depends(get_current_user)):
     result = functions.get_active_runs_by_rollnumber(roll_number)
 
     if not result:
@@ -126,42 +144,27 @@ def get_active_runs_endpoint(roll_number, token = Header(None)):
 
     return result
 
-@app.get("/machines/attention")
-def get_attention_machines(token = Header(None)):
-    username = functions.verify_token(token=token)
-    if not username:
-        raise HTTPException(status_code = 401, detail = "Invalid or Expired token")
-    return functions.get_machines_needing_attention()
-
-@app.get("/machines/todays_usage_stats/{block}")
-def get_todays_usage_stats(block: str, token = Header(None)):
-    username = functions.verify_token(token=token)
-    if not username:
-        raise HTTPException(status_code = 401, detail = "Invalid or Expired token")
-    if block not in ["a", "b", "c", "d"]:
-        raise HTTPException(
-            status_code=422,
-            detail="Block must be one of the following: a, b, c, d"
-        )
-    return functions.get_todays_usage(block)
-
-@app.post("/login")
-def login(data: LoginRequest):
-     token = functions.verify_login(username=data.username, password=data.password)
-     if not token:
-          raise HTTPException(status_code = 401, detail = "Invalid Credentials")
-     return {"token": token}
+# ----- Auth (public) -----
 
 @app.post("/register")
 def register_user(data: RegisterRequest):
-     if functions.register_user(user_name=data.user_name, password=data.password):
-          return {"message": "user registered successfully"}
-     raise HTTPException(status_code = 400, detail = "user already exists")
+    if data.role == "staff" and data.staff_code != functions.STAFF_CODE:
+        raise HTTPException(status_code = 403, detail = "Invalid staff code")
+    if functions.register_user(data.user_name, data.password, data.role):
+        return {"message": "user registered successfully"}
+    raise HTTPException(status_code = 400, detail = "user already exists")
+
+@app.post("/login")
+def login(data: LoginRequest):
+    token = functions.verify_login(username=data.username, password=data.password)
+    if not token:
+        raise HTTPException(status_code = 401, detail = "Invalid Credentials")
+    return {"token": token}
 
 @app.post("/refresh")
 def refresh(refresh_token = Header(None)):
-     username = functions.verify_token(token = refresh_token)
-     if not username:
-          raise HTTPException(status_code=401, detail = "Invalid or Expired refresh token")
-     access_token = functions.create_token(username=username, token_type="access")
-     return {"access_token": access_token}
+    user = functions.verify_token(token = refresh_token, expected_type = "refresh")
+    if not user:
+        raise HTTPException(status_code=401, detail = "Invalid or Expired refresh token")
+    access_token = functions.create_token(user["username"], user["role"], "access")
+    return {"access_token": access_token}
