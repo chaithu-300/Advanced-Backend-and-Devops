@@ -57,7 +57,7 @@ def update_todo(todo_id: int, data: TodoUpdate):
     return todo
 
 
-@app.delete("/todos/{todo_id}")
+@app.delete("/delete_todos/{todo_id}")
 def delete_todo(todo_id: int):
     if not functions.delete_todo(todo_id=todo_id):
         raise HTTPException(status_code=404, detail="Todo not found")
