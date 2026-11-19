@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException #pyright: ignore
 from pydantic import BaseModel, Field
 
 import functions
